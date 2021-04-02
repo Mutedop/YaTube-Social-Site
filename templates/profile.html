@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+  <main role="main" class="container">
+    <div class="row">
+      <div class="col-md-3 mb-3 mt-1">
+        {% include "includes/card_user.html" %}
+        <div class="col-md-9">
+          <p class="card-text">
+            {%for post in page%}
+              {% include "includes/post_item.html" with post=post %}
+            {%endfor%}
+          </p>
+          {% include "includes/paginator.html" %}
+        </div>
+      </div>
+    </div>
+  </main>
+{% endblock %}
