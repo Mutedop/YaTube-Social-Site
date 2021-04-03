@@ -94,3 +94,27 @@ class YatubeUrlTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'new.html')
+
+    def test_anonim_redirect_to_the_login(self):
+        """The comment page will redirect the anonymous user
+        to the login page.
+        """
+
+        response = self.guest_client.get(
+            f'/{YatubeUrlTests.post.author}/{YatubeUrlTests.post.id}/comment/',
+            follow=True
+        )
+        self.assertRedirects(
+            response,
+            f'/auth/login/?next=/{YatubeUrlTests.post.author}/'
+            f'{YatubeUrlTests.post.id}/comment/'
+        )
+
+    def test_comments_auth_user(self):
+        """An authorized user can comment on posts."""
+
+        response = YatubeUrlTests.author_client.get(
+            f'/{YatubeUrlTests.post.author}/{YatubeUrlTests.post.id}/comment/',
+            follow=True
+        )
+        self.assertEqual(response.status_code, 200)

@@ -19,7 +19,6 @@ class Group(models.Model):
     slug = models.SlugField(
         verbose_name='Слаг',
         max_length=200,
-        # default=slugify(title),
         unique=True,
         blank=True,
         help_text='Задать руками иЛЪ оставить машинамЪ шансЪ',
@@ -84,6 +83,23 @@ class Comment(models.Model):
     text = models.TextField()
     created = models.DateTimeField(
         auto_now_add=True,
+    )
+
+
+class Follow(models.Model):
+    """A model for subscribing to authors,
+    and handling user subscriptions.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='follower'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='following'
     )
 
 

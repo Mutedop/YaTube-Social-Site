@@ -3,11 +3,12 @@ import tempfile
 
 from django import forms
 from django.conf import settings
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from posts.models import Group, Post, User
+from posts.models import Follow, Group, Post, User
 
 
 class PagesTest(TestCase):
@@ -213,3 +214,80 @@ class PagesTest(TestCase):
                          PagesTest.post.text)
         self.assertEqual(post_image_0,
                          PagesTest.post.image)
+
+    def test_following_auth_user(self):
+        """An authorized user can follow other users."""
+
+        follower_count = Follow.objects.all().count()
+        self.authorized_client.get(reverse(
+            'profile_follow', args={PagesTest.author_post})
+        )
+        follower_count_now = Follow.objects.all().count()
+        self.assertNotEqual(follower_count_now, follower_count)
+
+    def test_unfollow_auth_user(self):
+        """An authorized user can unsubscribe from other users.
+        For clarity assertEqual - X, and kwargs.
+        """
+
+        Follow.objects.create(user=self.user, author=PagesTest.author_post)
+        follower_count = Follow.objects.all().count()
+        self.authorized_client.get(reverse(
+            'profile_unfollow', kwargs={'username': PagesTest.author_post})
+        )
+        follower_count_again = Follow.objects.all().count()
+        self.assertEqual(follower_count_again, follower_count - 1)
+
+    def test_post_for_following_authors(self):
+        """A new user post appears in the feed of those who are
+        subscribed to it and does not appear in the feed of those
+        who are not subscribed to it.
+        """
+
+        new_author = User.objects.create(username='Author Ja')
+        new_author_client = Client()
+        new_author_client.force_login(new_author)
+        user_one = User.objects.create(username='User One')
+        user_one_client = Client()
+        user_one_client.force_login(user_one)
+        user_two = User.objects.create(username='Third')
+        user_two_client = Client()
+        user_two_client.force_login(user_two)
+        # I subscribe to the author as the first client.
+        user_one_client.get(reverse(
+            'profile_follow', args=['Author Ja']
+        ))
+        # Creating a post with text.
+        Post.objects.create(
+            author=new_author,
+            text='The subscribed user sees the text.'
+        )
+        # The first user to request a page with selected authors.
+        response_user_one = user_one_client.get(reverse(
+            'follow_index'
+        ))
+        # The second user to request a page with selected authors
+        response_user_two = user_two_client.get(reverse(
+            'follow_index'
+        ))
+        # Check the context of the post of the text field,
+        # for the subscriber, expecting to see the result.
+        self.assertEquals(
+            response_user_one.context['post'].first().text,
+            'The subscribed user sees the text.'
+        )
+        # Not a subscriber on request, expecting a null result None.
+        self.assertEquals(response_user_two.context['post'].first(), None)
+
+    def test_cahces(self):
+        # Проверка кэша, честно подсмотрено в тредах, слишком много времени
+        # потратил на тест с созданием поста и проверкой через контент.
+        # Насчет контента знал еще на теории, когда про картинки разговор
+        # пошел, почитал статеек, поныкался в доках, и понял как примерно
+        # работает этот "скриншот" экрана. (для нашей ситуации)
+        # Но для оправдания, там в слаке много смуты наводят,
+        # лишнии параметры и строки.
+        cache_page = self.authorized_client.get(reverse('index'))
+        cache.clear()
+        after_clearing_cache = self.authorized_client.get(reverse('index'))
+        self.assertNotEqual(cache_page, after_clearing_cache)

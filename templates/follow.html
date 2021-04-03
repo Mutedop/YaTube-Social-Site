@@ -1,9 +1,9 @@
 {% extends "base.html" %} 
-{% block title %} Последние обновления {% endblock %}
+{% block title %} Follow {% endblock %}
 {% block content %}
   <div class="container">
     {% include "includes/menu.html" with index=True %}
-    <h1> Последние обновления на сайте</h1>
+    <h1>Избранные</h1>
     {% load cache %}
       {% cache 20 index_page page %}
         {% for post in page %}
@@ -12,6 +12,6 @@
     {% endcache %}
   </div>
   {% if page.has_other_pages %}
-    {% include "includes/paginator.html" %}
+    {% include "includes/paginator.html" with items=page paginator=paginator%}
   {% endif %}
 {% endblock %}
