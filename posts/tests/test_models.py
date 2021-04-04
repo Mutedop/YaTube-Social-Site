@@ -1,12 +1,14 @@
+import shutil
 import tempfile
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from posts.models import Group, Post, User
 
 
+@override_settings(MEDIA_ROOT='temp_media')
 class FieldPostGroupModelTest(TestCase):
     """Class Test for K: verbose name, help text field.
     And expected self methods.
@@ -40,6 +42,11 @@ class FieldPostGroupModelTest(TestCase):
             author=User.objects.create(username='tester'),
             image=cls.uploaded,
         )
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
 
     def test_verbose_name(self):
         """For custom form models, a human-readable name -
