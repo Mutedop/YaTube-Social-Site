@@ -51,22 +51,34 @@ class YatubeUrlTests(TestCase):
         }
 
     def test_urls_status_code(self):
+        """Check the availability of pages for an authorized user."""
+
         for template, reverse_name in self.templates_url_names.items():
             with self.subTest(template=template):
                 response = self.authorized_client.get(reverse_name)
                 self.assertEqual(response.status_code, 200)
 
     def test_urls_uses_correct_template(self):
+        """The URL uses the matching pattern."""
+
         for template, reverse_name in self.templates_url_names.items():
             with self.subTest():
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
     def test_redirect_anonymous_on_login(self):
+        """The page /new/ will redirect the anonymous
+        user to the login page.
+        """
+
         response = self.guest_client.get('/new/', follow=True)
         self.assertRedirects(response, '/auth/login/?next=/new/')
 
     def test_url_post_edit_redirect_guest_on_post(self):
+        """The page <username>/<post_id>/edit/ will redirect
+        the anonymous user to the login page.
+        """
+
         response = self.guest_client.get(
             f'/{YatubeUrlTests.post.author}/{YatubeUrlTests.post.id}/edit/',
             follow=True
@@ -78,6 +90,10 @@ class YatubeUrlTests(TestCase):
         )
 
     def test_url_post_edit_redirect_authorized_client_on_post(self):
+        """Correctness of work <username>/<post_id>/edit/ for the
+        authorized user of the author of the post.
+        """
+
         response = self.authorized_client.get(
             f'/{YatubeUrlTests.post.author}/{YatubeUrlTests.post.id}/edit/',
             follow=True
@@ -88,6 +104,11 @@ class YatubeUrlTests(TestCase):
         )
 
     def test_url_post_edit_available_for_author(self):
+        """The correctness of the page, the expected template for
+        <username>/<post_id>/edit/ work for the authorized user
+        of the author of the post.
+        """
+
         response = YatubeUrlTests.author_client.get(
             f'/{YatubeUrlTests.post.author}/{YatubeUrlTests.post.id}/edit/',
             follow=True
@@ -103,6 +124,18 @@ class YatubeUrlTests(TestCase):
         response = self.guest_client.get(
             f'/{YatubeUrlTests.post.author}/{YatubeUrlTests.post.id}/comment/',
             follow=True
+        )
+        self.assertRedirects(
+            response,
+            f'/auth/login/?next=/{YatubeUrlTests.post.author}/'
+            f'{YatubeUrlTests.post.id}/comment/'
+        )
+
+    def test_guest_comment_post(self):
+        """An unauthorized user will try to comment on the post."""
+
+        response = self.guest_client.post(
+            f'/{YatubeUrlTests.post.author}/{YatubeUrlTests.post.id}/comment/',
         )
         self.assertRedirects(
             response,

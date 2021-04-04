@@ -27,6 +27,7 @@ class PostFormTest(TestCase):
     def setUp(self):
         """Authorized users have access to the page with the model."""
 
+        self.guest_client = Client()
         self.user = User.objects.create_user(username='Tester')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
@@ -81,3 +82,18 @@ class PostFormTest(TestCase):
                 group=PostFormTest.group.id
             ).exists()
         )
+
+    def test_guest_client_create_post(self):
+        """The guest should not create a post,
+        I will make sure that the number of posts does not increase.
+        """
+        post_count = Post.objects.count()
+        form_data = {
+            'text': 'Post from guset client',
+        }
+        self.guest_client.post(
+            reverse('new_post'),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(Post.objects.count(), post_count)

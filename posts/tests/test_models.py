@@ -1,3 +1,7 @@
+import tempfile
+
+from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from posts.models import Group, Post, User
@@ -11,6 +15,20 @@ class FieldPostGroupModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        settings.MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
+        cls.small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        cls.uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=cls.small_gif,
+            content_type='image/gif'
+        )
         cls.group = Group.objects.create(
             title='Название',
             slug='Слаг',
@@ -20,6 +38,7 @@ class FieldPostGroupModelTest(TestCase):
             text='Текст поста',
             group=cls.group,
             author=User.objects.create(username='tester'),
+            image=cls.uploaded,
         )
 
     def test_verbose_name(self):
@@ -31,6 +50,7 @@ class FieldPostGroupModelTest(TestCase):
         field_verbose = {
             'text': 'Тело поста',
             'group': 'Группа',
+            'image': 'Картинка',
         }
         for value, expected in field_verbose.items():
             with self.subTest(value=value):
@@ -45,6 +65,7 @@ class FieldPostGroupModelTest(TestCase):
         field_help_text = {
             'text': 'Наполнить пост',
             'group': 'Выбор группы не обязателен, но желателен',
+            'image': 'Выобор картинки',
         }
         for value, expected in field_help_text.items():
             with self.subTest(value=value):

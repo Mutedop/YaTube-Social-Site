@@ -90,6 +90,8 @@ class PagesTest(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_index_correct_context(self):
+        """Index Page formed with the right context."""
+
         response = self.authorized_client.get(reverse('index'))
         post_object = response.context['page'][0]
         post_author_0 = post_object.author
@@ -106,6 +108,8 @@ class PagesTest(TestCase):
                          PagesTest.post.image)
 
     def test_group_correct_context(self):
+        """Group formed with the right context."""
+
         response = self.authorized_client.get(
             reverse('group_post',
                     kwargs={'slug': 'test-slug'}))
@@ -120,6 +124,8 @@ class PagesTest(TestCase):
             'test-slug')
 
     def test_new_post_correct_context(self):
+        """New Post formed with the right context."""
+
         response = (self.authorized_client.
                     get(reverse('new_post')))
         form_fields = {
@@ -133,6 +139,7 @@ class PagesTest(TestCase):
                 self.assertIsInstance(form_field, expected)
 
     def test_index_page_paginator(self):
+        """Checking the paginator for index."""
         response = self.authorized_client.get(reverse('index'))
         self.assertEqual(len(response.context.get('page').object_list), 10)
 
@@ -184,6 +191,7 @@ class PagesTest(TestCase):
         )
 
     def test_post_edit_correct_context(self):
+        """Post Edit formed with the right context."""
         response = PagesTest.author_client.get(
             reverse('post_edit',
                     kwargs={
@@ -201,6 +209,8 @@ class PagesTest(TestCase):
                 self.assertIsInstance(form_field, expected)
 
     def test_profile_correct_context(self):
+        """Profile formed with the right context."""
+
         response = self.authorized_client.get(
             reverse('profile', kwargs={'username': 'AuthorPost'})
         )
@@ -238,56 +248,95 @@ class PagesTest(TestCase):
         follower_count_again = Follow.objects.all().count()
         self.assertEqual(follower_count_again, follower_count - 1)
 
-    def test_post_for_following_authors(self):
-        """A new user post appears in the feed of those who are
-        subscribed to it and does not appear in the feed of those
-        who are not subscribed to it.
+    def test_post_for_follower_authors(self):
+        """Let's check if the last post from the author
+        is visible to the subscriber.
         """
 
-        new_author = User.objects.create(username='Author Ja')
-        new_author_client = Client()
-        new_author_client.force_login(new_author)
-        user_one = User.objects.create(username='User One')
-        user_one_client = Client()
-        user_one_client.force_login(user_one)
-        user_two = User.objects.create(username='Third')
-        user_two_client = Client()
-        user_two_client.force_login(user_two)
-        # I subscribe to the author as the first client.
-        user_one_client.get(reverse(
-            'profile_follow', args=['Author Ja']
+        self.authorized_client.get(reverse(
+            'profile_follow', args=[PagesTest.author_post]
         ))
-        # Creating a post with text.
         Post.objects.create(
-            author=new_author,
-            text='The subscribed user sees the text.'
+            author=PagesTest.author_post,
+            text='NewPost from old Author for test follow'
         )
-        # The first user to request a page with selected authors.
-        response_user_one = user_one_client.get(reverse(
-            'follow_index'
-        ))
-        # The second user to request a page with selected authors
-        response_user_two = user_two_client.get(reverse(
-            'follow_index'
-        ))
-        # Check the context of the post of the text field,
-        # for the subscriber, expecting to see the result.
+        response = self.authorized_client.get(
+            reverse('follow_index')
+        )
         self.assertEquals(
-            response_user_one.context['post'].first().text,
-            'The subscribed user sees the text.'
+            response.context['post'].last().text,
+            'NewPost from old Author for test follow'
         )
-        # Not a subscriber on request, expecting a null result None.
-        self.assertEquals(response_user_two.context['post'].first(), None)
 
-    def test_cahces(self):
-        # Проверка кэша, честно подсмотрено в тредах, слишком много времени
-        # потратил на тест с созданием поста и проверкой через контент.
-        # Насчет контента знал еще на теории, когда про картинки разговор
-        # пошел, почитал статеек, поныкался в доках, и понял как примерно
-        # работает этот "скриншот" экрана. (для нашей ситуации)
-        # Но для оправдания, там в слаке много смуты наводят,
-        # лишнии параметры и строки.
-        cache_page = self.authorized_client.get(reverse('index'))
+    def test_post_for_unfollower(self):
+        """Not a follower, should not see the new post of the author."""
+
+        user_is_not_a_follower = User.objects.create(username='Third')
+        user_is_not_a_follower_client = Client()
+        user_is_not_a_follower_client.force_login(user_is_not_a_follower)
+        Post.objects.create(
+            author=PagesTest.author_post,
+            text='NewPost from old Author for test follow'
+        )
+        response_user_two = user_is_not_a_follower_client.get(reverse(
+            'follow_index'
+        ))
+        self.assertEquals(response_user_two.context['post'].last(), None)
+
+
+class CacheTest(TestCase):
+    """We create a separate case for checking the cache
+    for the correct display of the page content.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.author_post_cache_test = User.objects.create_user(
+            username='Author Post'
+        )
+        cls.author_post_cache_test_client = Client()
+        cls.author_post_cache_test_client.force_login(
+            cls.author_post_cache_test
+        )
+        cls.group_cache = Group.objects.create(
+            title='cache test group',
+            slug='cache-test-group',
+            description='A group for testing the cache in the CacheTest Case',
+        )
+        cls.post_cache = Post.objects.create(
+            text='This post will be on the page initially.',
+            group=cls.group_cache,
+            author=cls.author_post_cache_test,
+        )
+
+    def setUp(self):
+        self.user_to_check_content = User.objects.create_user(
+            username='user checker'
+        )
+        self.user_to_check_content_client = Client()
+        self.user_to_check_content_client.force_login(
+            self.user_to_check_content
+        )
+
+    def test_cash_index(self):
+        """Сheck for the presence and changes of the
+        cache on the main page for the userю
+        """
+
+        response = self.user_to_check_content_client.get(reverse('index'))
+        page_content_before_clear = response.content
+        Post.objects.create(
+            author=CacheTest.author_post_cache_test,
+            text='New post in the cache test for the main page'
+        )
+        # Create another request to check that the new
+        # post did not get into the content
+        response2 = self.user_to_check_content_client.get(reverse('index'))
+        content2 = response2.content
+        self.assertEqual(page_content_before_clear, content2)
         cache.clear()
-        after_clearing_cache = self.authorized_client.get(reverse('index'))
-        self.assertNotEqual(cache_page, after_clearing_cache)
+        # After clearing the cache, I will check the changes
+        response3 = self.user_to_check_content_client.get(reverse('index'))
+        content3 = response3.content
+        self.assertNotEqual(content2, content3)

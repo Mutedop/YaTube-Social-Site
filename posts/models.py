@@ -2,6 +2,7 @@ import textwrap
 
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import UniqueConstraint
 
 User = get_user_model()
 
@@ -60,11 +61,17 @@ class Post(models.Model):
                   'но желателен',
     )
     image = models.ImageField(
-        upload_to='posts/', blank=True, null=True
+        upload_to='posts/', blank=True, null=True,
+        verbose_name='Картинка',
+        help_text='Выобор картинки'
     )
 
     def __str__(self):
         return textwrap.shorten(self.text, 15)
+
+
+class Meta:
+    ordering = ('-pub_date',)
 
 
 class Comment(models.Model):
@@ -102,6 +109,5 @@ class Follow(models.Model):
         related_name='following'
     )
 
-
-class Meta:
-    ordering = ('-pub_date',)
+    class Meta:
+        UniqueConstraint(fields=['user', 'author'], name='unique_follow')
