@@ -4,4 +4,4 @@
 #### - Создание, просмотр постов.
 #### - Комментирование постов.
 #### - Создание групп постов.
-![asdf](https://disk.yandex.ru/client/disk?idApp=client&dialog=slider&idDialog=%2Fdisk%2FScreenshot_88.png)
+![asdf](https://disk.yandex.ru/i/WdBsLqEm71O5Vg)
