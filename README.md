@@ -12,4 +12,4 @@ __________________________________
 > Зависимости в файле requirements.txt
 >> pip install requirements.txt -r
 __________________________________
-> TestCase
+> TestCase app
